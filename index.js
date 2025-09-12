@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
 import authRoutes from "./routes/auth.route.js";
+import adminRoutes from "./routes/admin.route.js";
 import cookieParser from "cookie-parser";
 
 dotenv.config();
@@ -30,6 +31,7 @@ mongoose
     res.send("Welcome to the E-commerce API");
   });
 app.use("/api/auth", authRoutes);
+app.use("/api/admin", adminRoutes);
 
 // start the server
 app.listen(PORT, () => {
