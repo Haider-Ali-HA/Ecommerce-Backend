@@ -12,7 +12,10 @@ const PORT = process.env.PORT || 8000;
 const MONGO_URL = process.env.MONGO_URL;
 
 // Middleware
-app.use(cors({ origin: "http://localhost:5173" }));
+app.use(cors({
+  origin: process.env.FRONTEND_URL, // replace with your frontend URL
+  credentials: true, // to allow cookies from frontend
+}));
 app.use(express.json());
 app.use(cookieParser()); // <-- MUST run before your routes so req.cookies exists
 
