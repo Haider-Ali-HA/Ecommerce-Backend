@@ -144,13 +144,6 @@ export const login = async (req, res) => {
         .json({ message: "User not found", success: false });
     }
 
-    // check user is verified
-    if (!user.isVerified) {
-      return res
-        .status(400)
-        .json({ message: "User is not verified", success: false });
-    }
-
     // Check password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
@@ -158,10 +151,46 @@ export const login = async (req, res) => {
         .status(400)
         .json({ message: "Invalid credentials", success: false });
     }
+    // check user is verified
+    if (!user.isVerified) {
+      // generate 6-digit verification token
+      const verifyToken = Math.floor(
+        100000 + Math.random() * 900000
+      ).toString();
+      const verifyTokenExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+      user.verifyToken = verifyToken;
+      user.verifyTokenExpires = verifyTokenExpires;
+      await user.save();
+
+      // Send verification token to user's email (token only)
+      await sendEmail({
+        to: user.email,
+        subject: "Verify your email",
+        text: `Your verification code is ${verifyToken}`,
+      });
+      // Generate token
+      generateToken(res, user._id);
+      return res
+        .status(400)
+        .json({
+          message:
+            "User is not verified, please check your email for the verification code",
+          success: false,
+          needsVerification: true,
+        });
+    }
 
     // Generate token
     generateToken(res, user._id);
-    return res.status(200).json({ message: "Login successful", success: true });
+    return res.status(200).json({ message: "Login successful", success: true }, user: {
+       id: user._id,
+       name: user.name,
+       email: user.email,
+       phone: user.phone,
+       role: user.role,
+       verifyUser: user.isVerified,
+
+      });
   } catch (error) {
     console.error("Error logging in user:", error);
     return res
@@ -173,7 +202,6 @@ export const login = async (req, res) => {
 export const forgotPassword = forgotPasswordShared;
 export const resetPassword = resetPasswordShared;
 
-
 export const logout = (req, res) => {
   res.cookie("token", "", {
     httpOnly: true,
@@ -181,7 +209,6 @@ export const logout = (req, res) => {
   });
   res.status(200).json({ message: "Logged out successfully", success: true });
 };
-
 
 export const getProfile = async (req, res) => {
   try {
