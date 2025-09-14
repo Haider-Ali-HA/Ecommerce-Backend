@@ -170,27 +170,28 @@ export const login = async (req, res) => {
       });
       // Generate token
       generateToken(res, user._id);
-      return res
-        .status(400)
-        .json({
-          message:
-            "User is not verified, please check your email for the verification code",
-          success: false,
-          needsVerification: true,
-        });
+      return res.status(400).json({
+        message:
+          "User is not verified, please check your email for the verification code",
+        success: false,
+        needsVerification: true,
+      });
     }
 
     // Generate token
     generateToken(res, user._id);
-    return res.status(200).json({ message: "Login successful", success: true }, user: {
-       id: user._id,
-       name: user.name,
-       email: user.email,
-       phone: user.phone,
-       role: user.role,
-       verifyUser: user.isVerified,
-
-      });
+    return res.status(200).json({
+      message: "Login successful",
+      success: true,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        verifyUser: user.isVerified,
+      },
+    });
   } catch (error) {
     console.error("Error logging in user:", error);
     return res
