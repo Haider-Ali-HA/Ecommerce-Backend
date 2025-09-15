@@ -46,7 +46,7 @@ const generateManagers = async () => {
   try {
     const managers = [];
 
-    for (let i = 1; i <= 100; i++) {
+    for (let i = 1; i <= 300; i++) {
       const hashedPassword = await bcrypt.hash("Password123!", 10); // Same default password for all
 
       managers.push({
