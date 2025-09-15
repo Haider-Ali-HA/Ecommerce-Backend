@@ -8,24 +8,29 @@ import {
 
 export const createManager = async (req, res) => {
   try {
-    const { name, email, password, role, phone } = req.body;
+    const { name, email, password, phone, isVerified } = req.body;
 
-    if (!name || !email || !password || !role || !phone) {
+    if (!name || !email || !password || !phone || isVerified === "undefined") {
       return res
         .status(400)
         .json({ message: "All fields are required", success: false });
     }
 
-    // generate 6-digit verification token
-    const verifyToken = Math.floor(100000 + Math.random() * 900000).toString();
-    const verifyTokenExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+    // Only generate a verification token if the user isn't marked verified
+    let verifyToken;
+    let verifyTokenExpires;
+    if (!isVerified) {
+      verifyToken = Math.floor(100000 + Math.random() * 900000).toString();
+      verifyTokenExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+    }
 
     const newUser = new User({
       name,
       email,
       password,
-      role,
+      role: "manager",
       phone,
+      isVerified: Boolean(isVerified),
       verifyToken,
       verifyTokenExpires,
     });
@@ -46,8 +51,37 @@ export const createManager = async (req, res) => {
 
 export const getAllManagers = async (req, res) => {
   try {
-    const managers = await User.find({ role: "manager" }).select("-password");
-    res.status(200).json({ managers, success: true });
+    // parse pagination query params
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(
+      100,
+      Math.max(1, parseInt(req.query.limit, 10) || 10)
+    ); // cap limit to 100
+    const skip = (page - 1) * limit;
+
+    const filter = { role: "manager" };
+
+    const [totalManagers, managers] = await Promise.all([
+      User.countDocuments(filter),
+      User.find(filter)
+        .select("-password")
+        .sort({ createdAt: -1 }) // descending order
+        .skip(skip)
+        .limit(limit),
+    ]);
+
+    const totalPages = Math.max(1, Math.ceil(totalManagers / limit));
+
+    res.status(200).json({
+      success: true,
+      page,
+      limit,
+      totalManagers,
+      totalPages,
+      hasPrevPage: page > 1,
+      hasNextPage: page < totalPages,
+      managers,
+    });
   } catch (error) {
     res
       .status(500)
@@ -58,25 +92,41 @@ export const getAllManagers = async (req, res) => {
 export const updateManager = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, password, phone } = req.body;
+    const { name, email, phone, isVerified } = req.body;
+    console.log(req.body);
 
-    if (!name || !email || !password || !phone) {
+    // Basic required fields (isVerified is optional when updating)
+
+    if (!name || !email || !phone) {
       return res
         .status(400)
         .json({ message: "All fields are required", success: false });
     }
 
-    const updatedManager = await User.findByIdAndUpdate(
-      id,
-      { name, email, password, phone },
-      { new: true }
-    );
-
-    if (!updatedManager) {
+    // Load the user and apply changes, then save so "pre('save')" hooks (e.g. password hashing) run.
+    const user = await User.findById(id);
+    if (!user) {
       return res
         .status(404)
         .json({ message: "Manager not found", success: false });
     }
+
+    user.name = name;
+    user.email = email;
+
+    user.phone = phone;
+
+    // Only update verification state when provided by client.
+    if (typeof isVerified !== "undefined") {
+      user.isVerified = Boolean(isVerified);
+      if (user.isVerified) {
+        // clear any pending verification token when admin marks user verified
+        user.verifyToken = undefined;
+        user.verifyTokenExpires = undefined;
+      }
+    }
+
+    const updatedManager = await user.save();
 
     res.status(200).json({
       message: "Manager updated successfully",
