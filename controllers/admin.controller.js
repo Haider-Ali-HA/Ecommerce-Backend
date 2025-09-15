@@ -51,43 +51,42 @@ export const createManager = async (req, res) => {
 
 export const getAllManagers = async (req, res) => {
   try {
-    // parse pagination query params
-    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
-    const limit = Math.min(
-      100,
-      Math.max(1, parseInt(req.query.limit, 10) || 10)
-    ); // cap limit to 100
+    // Get page and limit from query params, with defaults
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+
+    // Calculate skip value
     const skip = (page - 1) * limit;
 
-    const filter = { role: "manager" };
+    // Get total count
+    const totalManagers = await User.countDocuments({ role: "manager" });
 
-    const [totalManagers, managers] = await Promise.all([
-      User.countDocuments(filter),
-      User.find(filter)
-        .select("-password")
-        .sort({ createdAt: -1 }) // descending order
-        .skip(skip)
-        .limit(limit),
-    ]);
-
-    const totalPages = Math.max(1, Math.ceil(totalManagers / limit));
+    // Fetch paginated data
+    const managers = await User.find({ role: "manager" })
+      .select("-password")
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 }); // newest first
 
     res.status(200).json({
       success: true,
-      page,
-      limit,
-      totalManagers,
-      totalPages,
-      hasPrevPage: page > 1,
-      hasNextPage: page < totalPages,
       managers,
+      pagination: {
+        total: totalManagers,
+        page,
+        limit,
+        totalPages: Math.ceil(totalManagers / limit),
+      },
     });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Error fetching managers", error, success: false });
+    res.status(500).json({
+      success: false,
+      message: "Error fetching managers",
+      error,
+    });
   }
 };
+
 
 export const updateManager = async (req, res) => {
   try {
