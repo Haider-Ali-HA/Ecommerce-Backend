@@ -49,6 +49,50 @@ export const createManager = async (req, res) => {
   }
 };
 
+export const searchManagers = async (req, res) => {
+
+  try {
+    const { query = "", page = 1, limit = 10 } = req.query;
+
+    const filter = { role: "manager" };
+    if (query) {
+      filter.$or = [
+        { name: { $regex: query, $options: "i" } },
+        { email: { $regex: query, $options: "i" } },
+        { phone: { $regex: query, $options: "i" } },
+      ];
+    }
+
+        // convert page/limit to numbers
+    const pageNum = parseInt(page, 10) || 1;
+    const limitNum = parseInt(limit, 10) || 10;
+    // count total records
+    const total = await User.countDocuments(filter);
+
+    
+       // fetch paginated data
+    const managers = await User.find(filter)
+      .select("-password")
+      .skip((pageNum - 1) * limitNum)
+      .limit(limitNum)
+      .sort({ createdAt: -1 });
+    res.status(200).json({
+      success: true,
+      managers,
+      pagination: {
+        total,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(total / limitNum),
+      },
+    });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Error searching managers", error, success: false });
+  }
+};
+
 export const getAllManagers = async (req, res) => {
   try {
     // Get page and limit from query params, with defaults
@@ -87,12 +131,11 @@ export const getAllManagers = async (req, res) => {
   }
 };
 
-
 export const updateManager = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, email, phone, isVerified } = req.body;
-    console.log(req.body);
+    // console.log(req.body);
 
     // Basic required fields (isVerified is optional when updating)
 
