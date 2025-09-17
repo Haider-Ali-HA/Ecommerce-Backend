@@ -14,14 +14,14 @@ import {
   verifyNewUser,
   forgotPassword,
   resetPassword,
-  searchManagers,
+  filterManagers,
 } from "../controllers/admin.controller.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
 // Manager routes
-router.get("/managers/search", authMiddleware, adminMiddleware, searchManagers);
+router.get("/managers/search", authMiddleware, adminMiddleware, filterManagers);
 router.post("/create-manager", authMiddleware, adminMiddleware, createManager);
 router.get("/managers", authMiddleware, adminMiddleware, getAllManagers);
 router.get("/managers/:id", authMiddleware, adminMiddleware, getManagerById);

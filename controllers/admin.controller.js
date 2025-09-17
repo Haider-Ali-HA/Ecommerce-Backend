@@ -49,10 +49,10 @@ export const createManager = async (req, res) => {
   }
 };
 
-export const searchManagers = async (req, res) => {
-
+export const filterManagers = async (req, res) => {
   try {
-    const { query = "", page = 1, limit = 10 } = req.query;
+    const { query = "", status="", page = 1, limit = 10 } = req.query;
+    console.log("Filter params:", { query, status, page, limit });
 
     const filter = { role: "manager" };
     if (query) {
@@ -62,15 +62,21 @@ export const searchManagers = async (req, res) => {
         { phone: { $regex: query, $options: "i" } },
       ];
     }
+    if (status) {
+      if (status === "verified") {
+        filter.isVerified = true;
+      } else if (status === "unverified") {
+        filter.isVerified = false;
+      }
+    }
 
-        // convert page/limit to numbers
+    // convert page/limit to numbers
     const pageNum = parseInt(page, 10) || 1;
     const limitNum = parseInt(limit, 10) || 10;
     // count total records
     const total = await User.countDocuments(filter);
 
-    
-       // fetch paginated data
+    // fetch paginated data
     const managers = await User.find(filter)
       .select("-password")
       .skip((pageNum - 1) * limitNum)
@@ -92,6 +98,7 @@ export const searchManagers = async (req, res) => {
       .json({ message: "Error searching managers", error, success: false });
   }
 };
+
 
 export const getAllManagers = async (req, res) => {
   try {
