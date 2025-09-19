@@ -214,6 +214,7 @@ export const logout = (req, res) => {
 export const getProfile = async (req, res) => {
   try {
     const user = req.user; // Set in authMiddleware
+    console.log(req.user)
     if (!user) {
       return res
         .status(404)

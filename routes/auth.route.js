@@ -13,7 +13,7 @@ router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
 router.post("/logout", logout);
 router.get("/me", authMiddleware, getProfile); // protected route
-router.get("/me", adminMiddleware, getProfile); // protected route
+// router.get("/me", adminMiddleware, getProfile); // protected route
 
 
 export default router;
